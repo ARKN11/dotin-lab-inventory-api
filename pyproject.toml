@@ -1,0 +1,17 @@
+[project]
+name = "dotin-lab-inventory-api"
+version = "0.1.0"
+description = "An inventory management REST API built with Python and FastAPI as part of Dotin Lab backend engineering training."
+readme = "README.md"
+authors = [
+    { name = "ARKN" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.164.0",
+]
+
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"

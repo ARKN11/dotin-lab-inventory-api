@@ -62,11 +62,11 @@ def test_get_products_applies_pagination(client):
 def test_get_products_combines_filters_and_pagination(client):
     response = client.get(
         "/products",
-        params={"category": "electronics", "search": "o", "skip": 1, "limit": 1},
+        params={"category": "electronics", "search": "mo", "skip": 1, "limit": 1},
     )
 
     assert response.status_code == 200
-    assert [product["id"] for product in response.json()] == [25]
+    assert [product["id"] for product in response.json()] == [37]
 
 
 @pytest.mark.parametrize(

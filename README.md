@@ -31,6 +31,7 @@ The project is being developed incrementally throughout the internship. It curre
 - Uvicorn (through FastAPI standard dependencies)
 - uv for dependency and environment management
 - pytest and HTTPX for automated API tests
+- MyPy for static type checking
 
 ## Project Structure
 
@@ -156,6 +157,18 @@ The tests cover:
 - Stock increase and invalid quantities.
 
 Each test receives an isolated copy of the initial in-memory product data, so test execution order does not affect results.
+
+## Static Type Checking
+
+The project uses MyPy to detect type inconsistencies without executing the application.
+
+Run MyPy against the application source:
+
+```bash
+uv run mypy src/
+```
+
+The initial MyPy configuration is intentionally moderate. Type-checking strictness will be increased as the application architecture and typing practices are developed during the internship.
 
 ## Current Limitations
 

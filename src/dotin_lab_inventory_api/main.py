@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 from fastapi import FastAPI, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
@@ -31,7 +33,15 @@ class ProductResponse(BaseModel):
     category: str
 
 
-products = [
+class ProductData(TypedDict):
+    id: int
+    name: str
+    price: float
+    stock: int
+    category: str
+
+
+products: list[ProductData] = [
     {"id": 10, "name": "Keyboard", "price": 85, "stock": 20, "category": "Electronics"},
     {"id": 25, "name": "Mouse", "price": 25, "stock": 50, "category": "Electronics"},
     {"id": 37, "name": "Monitor", "price": 220, "stock": 15, "category": "Electronics"},
@@ -40,7 +50,7 @@ products = [
     {"id": 63, "name": "Notebook", "price": 5, "stock": 100, "category": "Stationery"},
 ]
 
-last_product_id = max(product["id"] for product in products) if products else 0
+last_product_id: int = max(product["id"] for product in products) if products else 0
 
 
 def get_next_product_id() -> int:
@@ -67,7 +77,7 @@ def get_products(
     limit: int = Query(default=10, gt=0, le=100),
     skip: int = Query(default=0, ge=0),
     search: str | None = Query(default=None, min_length=2, max_length=100),
-) -> list[ProductResponse]:
+) -> list[ProductData]:
     filtered_products = products
     if category is not None:
         category = category.lower().strip()
@@ -87,7 +97,7 @@ def get_products(
 
 
 @app.get("/products/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int) -> ProductResponse:
+def get_product(product_id: int) -> ProductData:
     for product in products:
         if product["id"] == product_id:
             return product
@@ -99,18 +109,27 @@ def get_product(product_id: int) -> ProductResponse:
 @app.post(
     "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
 )
-def create_product(product: ProductCreate) -> ProductResponse:
+def create_product(product: ProductCreate) -> ProductData:
     product_id = get_next_product_id()
-    new_product = product.model_dump() | {"id": product_id}
+    new_product: ProductData = {
+        "id": product_id,
+        "name": product.name,
+        "price": product.price,
+        "stock": product.stock,
+        "category": product.category,
+    }
     products.append(new_product)
     return new_product
 
 
 @app.put("/products/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, product: ProductReplacement) -> ProductResponse:
+def update_product(product_id: int, product: ProductReplacement) -> ProductData:
     for item in products:
         if item["id"] == product_id:
-            item.update(product.model_dump())
+            item["name"] = product.name
+            item["price"] = product.price
+            item["stock"] = product.stock
+            item["category"] = product.category
             return item
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
@@ -118,10 +137,17 @@ def update_product(product_id: int, product: ProductReplacement) -> ProductRespo
 
 
 @app.patch("/products/{product_id}", response_model=ProductResponse)
-def partial_update_product(product_id: int, product: ProductUpdate) -> ProductResponse:
+def partial_update_product(product_id: int, product: ProductUpdate) -> ProductData:
     for item in products:
         if item["id"] == product_id:
-            item.update(product.model_dump(exclude_unset=True, exclude_none=True))
+            if product.name is not None:
+                item["name"] = product.name
+            if product.price is not None:
+                item["price"] = product.price
+            if product.stock is not None:
+                item["stock"] = product.stock
+            if product.category is not None:
+                item["category"] = product.category
             return item
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
@@ -140,7 +166,7 @@ def delete_product(product_id: int) -> None:
 
 
 @app.post("/products/{product_id}/increase-stock", response_model=ProductResponse)
-def increase_stock(product_id: int, quantity: int = Query(gt=0)) -> ProductResponse:
+def increase_stock(product_id: int, quantity: int = Query(gt=0)) -> ProductData:
     for product in products:
         if product["id"] == product_id:
             product["stock"] += quantity

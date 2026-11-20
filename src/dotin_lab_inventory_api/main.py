@@ -1,28 +1,33 @@
-from typing import TypedDict
+from typing import Annotated, TypedDict, cast
 
-from fastapi import FastAPI, HTTPException, status, Query
+from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel, Field
+
+ProductName = Annotated[str, Field(min_length=2, max_length=100)]
+ProductPrice = Annotated[float, Field(gt=0)]
+ProductStock = Annotated[int, Field(ge=0)]
+ProductCategory = Annotated[str, Field(min_length=2, max_length=100)]
 
 
 class ProductCreate(BaseModel):
-    name: str = Field(min_length=2, max_length=100)
-    price: float = Field(gt=0)
-    stock: int = Field(ge=0)
-    category: str = Field(min_length=2, max_length=100)
+    name: ProductName
+    price: ProductPrice
+    stock: ProductStock
+    category: ProductCategory
 
 
 class ProductUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=2, max_length=100)
-    price: float | None = Field(default=None, gt=0)
-    stock: int | None = Field(default=None, ge=0)
-    category: str | None = Field(default=None, min_length=2, max_length=100)
+    name: ProductName | None = None
+    price: ProductPrice | None = None
+    stock: ProductStock | None = None
+    category: ProductCategory | None = None
 
 
 class ProductReplacement(BaseModel):
-    name: str = Field(min_length=2, max_length=100)
-    price: float = Field(gt=0)
-    stock: int = Field(ge=0)
-    category: str = Field(min_length=2, max_length=100)
+    name: ProductName
+    price: ProductPrice
+    stock: ProductStock
+    category: ProductCategory
 
 
 class ProductResponse(BaseModel):
@@ -35,6 +40,13 @@ class ProductResponse(BaseModel):
 
 class ProductData(TypedDict):
     id: int
+    name: str
+    price: float
+    stock: int
+    category: str
+
+
+class ProductUpdateData(TypedDict, total=False):
     name: str
     price: float
     stock: int
@@ -138,17 +150,20 @@ def update_product(product_id: int, product: ProductReplacement) -> ProductData:
 
 @app.patch("/products/{product_id}", response_model=ProductResponse)
 def partial_update_product(product_id: int, product: ProductUpdate) -> ProductData:
-    for item in products:
-        if item["id"] == product_id:
-            if product.name is not None:
-                item["name"] = product.name
-            if product.price is not None:
-                item["price"] = product.price
-            if product.stock is not None:
-                item["stock"] = product.stock
-            if product.category is not None:
-                item["category"] = product.category
-            return item
+    for existing_product in products:
+        if existing_product["id"] == product_id:
+            for field in product.model_fields_set:
+                if getattr(product, field) is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"Field '{field}' cannot be set to None",
+                    )
+            update_data = cast(
+                ProductUpdateData, product.model_dump(exclude_unset=True)
+            )
+            existing_product.update(update_data)
+            return existing_product
+
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
     )

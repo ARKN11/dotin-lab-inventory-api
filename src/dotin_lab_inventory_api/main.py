@@ -1,6 +1,6 @@
-from typing import TypedDict, cast, Annotated
+from typing import Annotated, TypedDict, cast
 
-from fastapi import FastAPI, HTTPException, status, Query
+from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 ProductName = Annotated[str, Field(min_length=2, max_length=100)]
@@ -40,6 +40,13 @@ class ProductResponse(BaseModel):
 
 class ProductData(TypedDict):
     id: int
+    name: str
+    price: float
+    stock: int
+    category: str
+
+
+class ProductUpdateData(TypedDict, total=False):
     name: str
     price: float
     stock: int
@@ -151,9 +158,10 @@ def partial_update_product(product_id: int, product: ProductUpdate) -> ProductDa
                         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail=f"Field '{field}' cannot be set to None",
                     )
-            existing_product.update(
-                cast(ProductData, product.model_dump(exclude_unset=True))
+            update_data = cast(
+                ProductUpdateData, product.model_dump(exclude_unset=True)
             )
+            existing_product.update(update_data)
             return existing_product
 
     raise HTTPException(

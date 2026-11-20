@@ -160,12 +160,12 @@ def test_patch_updates_only_supplied_fields(client):
     assert response.json()["stock"] == 50
 
 
-def test_patch_ignores_explicit_null_values(client):
+
+def test_patch_rejects_explicit_null_values(client):
     response = client.patch("/products/25", json={"name": None, "price": 35})
 
-    assert response.status_code == 200
-    assert response.json()["name"] == "Mouse"
-    assert response.json()["price"] == 35
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Field 'name' cannot be set to None"
 
 
 def test_patch_rejects_invalid_values(client):

@@ -1,7 +1,7 @@
-from typing import Annotated, TypedDict, cast
+from typing import Annotated, TypedDict, cast, Self
 
 from fastapi import FastAPI, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 ProductName = Annotated[str, Field(min_length=2, max_length=100)]
 ProductPrice = Annotated[float, Field(gt=0)]
@@ -9,11 +9,27 @@ ProductStock = Annotated[int, Field(ge=0)]
 ProductCategory = Annotated[str, Field(min_length=2, max_length=100)]
 
 
-class ProductCreate(BaseModel):
+def validate_text(value: str) -> str:
+    if not value.strip():
+        raise ValueError("Value cannot contain only whitespace")
+
+    return value
+
+
+class ProductBase(BaseModel):
     name: ProductName
     price: ProductPrice
     stock: ProductStock
     category: ProductCategory
+
+    @field_validator("name", "category", mode="after")
+    @classmethod
+    def validate_text_fields(cls, value: str) -> str:
+        return validate_text(value)
+
+
+class ProductCreate(ProductBase):
+    pass
 
 
 class ProductUpdate(BaseModel):
@@ -22,20 +38,27 @@ class ProductUpdate(BaseModel):
     stock: ProductStock | None = None
     category: ProductCategory | None = None
 
+    @field_validator("name", "category", mode="after")
+    @classmethod
+    def validate_text_fields(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
 
-class ProductReplacement(BaseModel):
-    name: ProductName
-    price: ProductPrice
-    stock: ProductStock
-    category: ProductCategory
+        return validate_text(value)
+
+    @model_validator(mode="after")
+    def validate_update(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        return self
 
 
-class ProductResponse(BaseModel):
+class ProductReplacement(ProductBase):
+    pass
+
+
+class ProductResponse(ProductBase):
     id: int
-    name: str
-    price: float
-    stock: int
-    category: str
 
 
 class ProductData(TypedDict):
@@ -93,6 +116,12 @@ def get_products(
     filtered_products = products
     if category is not None:
         category = category.lower().strip()
+
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Category cannot contain only whitespace",
+            )
         filtered_products = [
             product
             for product in filtered_products
@@ -100,6 +129,13 @@ def get_products(
         ]
     if search is not None:
         search = search.lower().strip()
+
+        if not search:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Search cannot contain only whitespace",
+            )
+
         filtered_products = [
             product
             for product in filtered_products

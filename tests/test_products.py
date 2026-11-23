@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from dotin_lab_inventory_api import main
 
-
 INITIAL_PRODUCTS = [
     {"id": 10, "name": "Keyboard", "price": 85, "stock": 20, "category": "Electronics"},
     {"id": 25, "name": "Mouse", "price": 25, "stock": 50, "category": "Electronics"},
@@ -212,9 +211,7 @@ def test_increase_stock_updates_and_returns_product(client):
 
 @pytest.mark.parametrize("quantity", [0, -5])
 def test_increase_stock_rejects_non_positive_quantity(client, quantity):
-    response = client.post(
-        "/products/25/increase-stock", params={"quantity": quantity}
-    )
+    response = client.post("/products/25/increase-stock", params={"quantity": quantity})
 
     assert response.status_code == 422
 
@@ -226,8 +223,70 @@ def test_increase_stock_requires_quantity(client):
 
 
 def test_increase_stock_returns_404_for_unknown_product(client):
-    response = client.post(
-        "/products/999/increase-stock", params={"quantity": 10}
-    )
+    response = client.post("/products/999/increase-stock", params={"quantity": 10})
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["name", "category"],
+)
+def test_create_product_rejects_whitespace_only_text(client, field):
+    payload = {
+        "name": "Webcam",
+        "price": 75,
+        "stock": 12,
+        "category": "Electronics",
+    }
+    payload[field] = "   "
+
+    response = client.post("/products", json=payload)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["name", "category"],
+)
+def test_put_rejects_whitespace_only_text(client, field):
+    payload = {
+        "name": "Wireless Mouse",
+        "price": 40,
+        "stock": 30,
+        "category": "Accessories",
+    }
+    payload[field] = "   "
+
+    response = client.put("/products/25", json=payload)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["name", "category"],
+)
+def test_patch_rejects_whitespace_only_text_without_modifying_product(client, field):
+    original_product = client.get("/products/25").json()
+
+    response = client.patch(
+        "/products/25",
+        json={field: "   "},
+    )
+
+    assert response.status_code == 422
+
+    unchanged_product = client.get("/products/25").json()
+    assert unchanged_product == original_product
+
+
+def test_patch_rejects_empty_body(client):
+    response = client.patch("/products/25", json={})
+
+    assert response.status_code == 422
+
+    unchanged_product = client.get("/products/25").json()
+    assert unchanged_product["name"] == "Mouse"
+    assert unchanged_product["price"] == 25

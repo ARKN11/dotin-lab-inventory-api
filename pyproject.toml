@@ -28,3 +28,6 @@ pretty = true
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
+
+[tool.fastapi]
+entrypoint = "dotin_lab_inventory_api.main:app"

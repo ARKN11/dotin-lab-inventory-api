@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from dotin_lab_inventory_api import main
 
+from dotin_lab_inventory_api.repositories import product_repository as repository
+
 INITIAL_PRODUCTS = [
     {"id": 10, "name": "Keyboard", "price": 85, "stock": 20, "category": "Electronics"},
     {"id": 25, "name": "Mouse", "price": 25, "stock": 50, "category": "Electronics"},
@@ -18,8 +20,8 @@ INITIAL_PRODUCTS = [
 @pytest.fixture
 def client(monkeypatch):
     # Give every test an independent copy of the initial in-memory data.
-    monkeypatch.setattr(main, "products", deepcopy(INITIAL_PRODUCTS))
-    monkeypatch.setattr(main, "last_product_id", 63)
+    monkeypatch.setattr(repository, "products", deepcopy(INITIAL_PRODUCTS))
+    monkeypatch.setattr(repository, "last_product_id", 63)
     return TestClient(main.app)
 
 

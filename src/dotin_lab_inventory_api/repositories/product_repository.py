@@ -35,14 +35,20 @@ def create(product_data: ProductCreateData) -> ProductData:
     return new_product.copy()
 
 
-
-def update(product_id: int, product_data: ProductUpdateData) -> ProductData | None:
+def update(
+    product_id: int,
+    product_data: ProductUpdateData,
+) -> ProductData | None:
     for index, product in enumerate(products):
         if product["id"] == product_id:
-            updated_product = product.copy()
-            updated_product.update(product_data)
+            updated_product: ProductData = {
+                **product,
+                **product_data,
+            }
+
             products[index] = updated_product
-            return products[index].copy()
+            return updated_product.copy()
+
     return None
 
 

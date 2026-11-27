@@ -35,3 +35,4 @@ dist/
 # Operating system
 .DS_Store
 Thumbs.db
+python.md

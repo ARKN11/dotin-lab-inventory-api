@@ -1,6 +1,6 @@
-from typing import cast
+from typing import Annotated, cast
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, Depends
 
 from dotin_lab_inventory_api.schemas.product import (
     ProductCreate,
@@ -12,19 +12,21 @@ from dotin_lab_inventory_api.schemas.product import (
     ProductUpdateData,
 )
 from dotin_lab_inventory_api.services import product_service
+from dotin_lab_inventory_api.dependencies.pagination import get_pagination
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
 @router.get("", response_model=list[ProductResponse])
 def get_products(
+    pagination: Annotated[dict[str, int], Depends(get_pagination)],
     category: str | None = Query(default=None, min_length=2, max_length=100),
-    limit: int = Query(default=10, gt=0, le=100),
-    skip: int = Query(default=0, ge=0),
     search: str | None = Query(default=None, min_length=2, max_length=100),
 ) -> list[ProductData]:
     try:
-        products = product_service.get_products(category, search, skip, limit)
+        products = product_service.get_products(
+            category, search, pagination["skip"], pagination["limit"]
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
